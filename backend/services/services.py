@@ -1,11 +1,15 @@
 from typing import List, Dict, Any
-from models.models import *
+from backend.models.models import *
 import os
+import json
 import requests
+import sqlite3
 from fastapi import HTTPException
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 from dotenv import load_dotenv
+from backend.database import get_db_connection
+
 load_dotenv()
 
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
@@ -92,12 +96,22 @@ def get_ai_matches(user_profile: str, issues: List[Dict[str, Any]]) -> List[Dict
     issue_data_for_output = []
 
     for issue in issues:
-        issue_text = f"Title: {issue['title']}\n\nBody: {issue['body'][:500]}..."
+        # Get the body content safely, using empty string if not present
+        body = issue.get('body', '') or ''
+        # Truncate body to 500 chars if it exists
+        truncated_body = body[:500] + ('...' if len(body) > 500 else '')
+        
+        # Safely get all required fields with defaults
+        title = issue.get('title', 'No title available')
+        url = issue.get('html_url', issue.get('url', '#'))  # Try html_url first, then url, then default to #
+        labels = issue.get('labels', [])
+        
+        issue_text = f"Title: {title}\n\nBody: {truncated_body}"
         issue_docs.append(issue_text)
         issue_data_for_output.append({
-            "title": issue['title'],
-            "url": issue['html_url'],
-            "labels": [label['name'] for label in issue['labels']]
+            "title": title,
+            "url": url,
+            "labels": [label.get('name', '') for label in labels if isinstance(label, dict)]
         })
 
     #generate embeddings
@@ -117,3 +131,48 @@ def get_ai_matches(user_profile: str, issues: List[Dict[str, Any]]) -> List[Dict
         })
     
     return sorted(results, key=lambda x: x['score'], reverse=True)
+
+def fetch_issues_from_db() -> List[Dict[str, Any]]:
+    """
+    Fetches all available issues from the local database.
+    """
+    print("Fetching issues from local database...")
+
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM issues")
+        issues = cursor.fetchall()
+        conn.close()
+
+        # Convert sqlite3.Row objects to dicts and reconstruct the data structure
+        formatted_issues = []
+        for row in issues:
+            issue_dict = dict(row)
+            
+            # Convert stored labels string back to list of label objects
+            try:
+                labels_str = issue_dict.get('labels', '[]')
+                labels_list = json.loads(labels_str) if labels_str else []
+            except:
+                labels_list = []
+            
+            formatted_issue = {
+                'title': issue_dict['title'],
+                'body': issue_dict['body_text'],
+                'html_url': issue_dict['github_url'],
+                'labels': [{'name': label} for label in labels_list]
+            }
+            formatted_issues.append(formatted_issue)
+            
+        return formatted_issues
+    
+    except sqlite3.OperationalError as e:
+        print(f"DATABASE ERROR: {e}")
+        print(f"Did you run 'python backend/scanner.py' first?")
+        return []
+    
+    except Exception as e:
+        print(f"Error fetching from DB: {e}")
+        return []
+    
