@@ -2,7 +2,13 @@
 
 ## Project Overview
 
+
+
 First-PR is a web application designed to help new contributors find suitable "good first issues" on GitHub. Users can describe their skills and interests, and the application will match them with relevant issues from a curated list of open-source repositories, making it easier to make their first contribution.
+
+
+
+![App Preview](images/App_preview.png)
 
 ## Features
 
