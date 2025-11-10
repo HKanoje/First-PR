@@ -1,7 +1,7 @@
 
-from models.models import *
+from backend.models.models import *
 from fastapi import FastAPI, HTTPException
-from services.services import *
+from backend.services.services import *
 
 
 
@@ -22,35 +22,27 @@ def get_health_check():
 @app.post("/matches", response_model=MatchResponse)
 def get_matches(request: MatchRequest):
     """
-    This is the main endpoint for our MVP.
-    
-    It takes a user's profile and a list of repos,
-    scans them live, and returns the best matches.
-    
-    (Note: This is *not* the final architecture, as scanning
-    live is slow. But it's the perfect MVP step.)
-    """
-    
-    print(f"Received match request for {len(request.repos_to_scan)} repos.")
+    This is the main endpoint for our V1 System.
 
-    #fetch all issues from all repos
-    all_issues = []
-    for repo_name in request.repos_to_scan:
-        issues = fetch_issues_for_repo(repo_name)
-        all_issues.extend(issues)  # Use extend instead of append to flatten the list
+    It takes a user's profile, reads issues from the local database,
+    and return the best matches.
+    """
+
+    #fetch issues from local DB
+    all_issues = fetch_issues_from_db()
 
     if not all_issues:
-        print("No issues found in all repos.")
-        return MatchResponse(matches=[], issues_scanned=0, profile_summary=request.user_profile)
+        print("No issues found in the local database.")
+        #this is a crital error this means the scanner has not been run
+        raise HTTPException(status_code=503,
+                            detail="No issues found in the local database. Please run the scanner first.")
     
-    #get AI Ranked Matches
-    print(f"Total issues found: {len(all_issues)}. Running AI Matching...")
-    matched_issues = get_ai_matches(request.user_profile, all_issues)
+    #get AI matches
+    print(f"Total issues in DB: {len(all_issues)}. Running AI matching...")
+    matched_issue = get_ai_matches(request.user_profile, all_issues)
 
-    #get top 10 results
-    top_10_matches = matched_issues[:10]
-
-    print(f"Returning {len(top_10_matches)} matches.")
+    #get top 10
+    top_10_matches = matched_issue[:10]
 
     return MatchResponse(
         matches=top_10_matches,
