@@ -2,14 +2,27 @@
 from backend.models.models import *
 from fastapi import FastAPI, HTTPException
 from backend.services.services import *
+from fastapi.middleware.cors import CORSMiddleware
 
-
+# Define the "origins" (frontends) that are allowed to talk to us.
+origins = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+]
 
 
 app = FastAPI(
     title="First-PR API",
     description="The core AI-based mathcing service for fiding first-time contributors to open source projects.",
     version="0.1.0",
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,  # Allow our frontend's origin
+    allow_credentials=True,
+    allow_methods=["*"],  # Allow all methods (GET, POST, OPTIONS, etc)
+    allow_headers=["*"],  # Allow all headers (like Content-Type)
 )
 
 @app.get("/")
