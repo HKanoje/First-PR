@@ -42,3 +42,11 @@ typing-inspection==0.4.2
 typing_extensions==4.15.0
 urllib3==2.5.0
 uvicorn==0.38.0
+
+# Added auth/session/OAuth and DB dependencies used by backend
+authlib
+python-jose[cryptography]
+passlib[bcrypt]
+sqlalchemy
+httpx
+itsdangerous

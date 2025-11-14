@@ -1,36 +1,45 @@
-
-from backend.models.models import *
+import os
 from fastapi import FastAPI, HTTPException
-from backend.services.services import *
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.sessions import SessionMiddleware
+from dotenv import load_dotenv
+from models.models import *
+from services.services import *
+from auth import router as auth_router
+
+load_dotenv()
 
 # Define the "origins" (frontends) that are allowed to talk to us.
-origins = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-]
-
+origins = [os.getenv("FRONTEND_ORIGIN", "http://localhost:5173")]
 
 app = FastAPI(
     title="First-PR API",
-    description="The core AI-based mathcing service for fiding first-time contributors to open source projects.",
+    description="The core AI-based matching service for finding first-time contributors to open source projects.",
     version="0.1.0",
+)
+
+# Session middleware required for OAuth (Authlib uses request.session)
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=os.getenv("SESSION_SECRET", os.getenv("JWT_SECRET", "dev-session-secret")),
+    same_site="lax",
 )
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,  # Allow our frontend's origin
+    allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["*"],  # Allow all methods (GET, POST, OPTIONS, etc)
-    allow_headers=["*"],  # Allow all headers (like Content-Type)
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
-@app.get("/")
-def get_health_check():
-    """
-    Simple health check endpoint.
-    """
-    return {"status": "ok", "message": "First-PR API is running."}
+# Include auth router
+app.include_router(auth_router)
+
+@app.get("/healthz")
+def healthz():
+    """Health check endpoint."""
+    return {"ok": True}
 
 @app.post("/matches", response_model=MatchResponse)
 def get_matches(request: MatchRequest):
