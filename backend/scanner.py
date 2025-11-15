@@ -1,7 +1,13 @@
 import os
+import sys
 import requests
 import json
 from typing import List, Dict, Any
+from pathlib import Path
+
+# Add backend directory to path for imports
+sys.path.insert(0, str(Path(__file__).parent))
+
 from database import get_db_connection
 from services.services import fetch_issues_for_repo  # Moving this import lower to avoid circular import
 
