@@ -18,19 +18,20 @@ app = FastAPI(
     version="0.1.0",
 )
 
-# Session middleware required for OAuth (Authlib uses request.session)
-app.add_middleware(
-    SessionMiddleware,
-    secret_key=os.getenv("SESSION_SECRET", os.getenv("JWT_SECRET", "dev-session-secret")),
-    same_site="lax",
-)
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+)
+
+# Session middleware required for OAuth (Authlib uses request.session)
+# Must be added after CORS middleware
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=os.getenv("SESSION_SECRET", os.getenv("JWT_SECRET", "dev-session-secret")),
+    same_site="lax",
 )
 
 # Include auth router
