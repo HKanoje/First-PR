@@ -1,5 +1,5 @@
 from typing import List, Dict, Any
-from backend.models.models import *
+from models.models import *
 import os
 import json
 import requests
@@ -8,7 +8,7 @@ from fastapi import HTTPException
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 from dotenv import load_dotenv
-from backend.database import get_db_connection
+from database import get_db_connection
 
 load_dotenv()
 
